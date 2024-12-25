@@ -750,13 +750,3 @@ Using `torch.save`, save your model for future loading.
 ```python
 torch.save(net.state_dict(), 'cifar_net.pth')
 ```
-
-## Make a Recommendation
-
-Based on your evaluation, what is your recommendation on whether to build or buy? Explain your reasoning below.
-
-
-
-**Double click this cell to modify it**
-
-
