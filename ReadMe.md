@@ -45,21 +45,25 @@ Once your dataset is created, you'll also need to define a `DataLoader` from the
 
 ```python
 # Define transforms
-transform = transforms.Compose(
-  [transforms.ToTensor(),
-   transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+transform = transforms.Compose([
+  transforms.ToTensor(),
+  transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
+
+batchSize = 128
+numWorkers = 4
 
 # Create training set and define training dataloader
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                     download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=5,
-                      shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batchSize,
+                      shuffle=True, num_workers=numWorkers)
 
 # Create test set and define test dataloader
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                      download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=5,
-                     shuffle=False, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batchSize,
+                     shuffle=False, num_workers=numWorkers)
 
 # The 10 classes in the dataset
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -67,7 +71,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 
     Files already downloaded and verified
     Files already downloaded and verified
-
+    
 
 ## Explore the Dataset
 Using matplotlib, numpy, and torch, explore the dimensions of your data.
@@ -99,11 +103,11 @@ def show5(img_loader):
 show5(trainloader)
 ```
 
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.94509804..1.0].
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.94509804..0.7490196].
+    
 
-
-    truck
-
+    plane
+    
 
 
     
@@ -111,11 +115,11 @@ show5(trainloader)
     
 
 
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.96862745..0.99215686].
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.99215686..0.8666667].
+    
 
-
-    cat
-
+    bird
+    
 
 
     
@@ -123,11 +127,11 @@ show5(trainloader)
     
 
 
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.9529412..1.0].
+    frog
+    
 
-
-    truck
-
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-1.0..0.8039216].
+    
 
 
     
@@ -135,11 +139,11 @@ show5(trainloader)
     
 
 
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-1.0..0.9372549].
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.92941177..0.85882354].
+    
 
-
-    bird
-
+    horse
+    
 
 
     
@@ -147,11 +151,11 @@ show5(trainloader)
     
 
 
-    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-0.9764706..0.67058825].
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers). Got range [-1.0..0.9843137].
+    
 
-
-    horse
-
+    ship
+    
 
 
     
@@ -168,23 +172,31 @@ Feel free to construct a model of any architecture – feedforward, convolutiona
 class Net(nn.Module):
   def __init__(self):
     super(Net, self).__init__()
-    self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
-    self.bn1 = nn.BatchNorm2d(32)
-    self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
-    self.bn2 = nn.BatchNorm2d(64)
+    self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
+    self.bn1 = nn.BatchNorm2d(64)
+    self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
+    self.bn2 = nn.BatchNorm2d(128)
+    self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
+    self.bn3 = nn.BatchNorm2d(256)
+    self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+    self.bn4 = nn.BatchNorm2d(512)
+    self.conv5 = nn.Conv2d(512, 512, 3, padding=1)
+    self.bn5 = nn.BatchNorm2d(512)
     self.pool = nn.MaxPool2d(2, 2)
-    self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
-    self.bn3 = nn.BatchNorm2d(128)
-    self.fc1 = nn.Linear(128 * 4 * 4, 512)
+    self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+    self.fc1 = nn.Linear(512, 1024)
     self.dropout = nn.Dropout(0.5)
-    self.fc2 = nn.Linear(512, 256)
-    self.fc3 = nn.Linear(256, 10)
+    self.fc2 = nn.Linear(1024, 512)
+    self.fc3 = nn.Linear(512, 10)
 
   def forward(self, x):
     x = self.pool(F.relu(self.bn1(self.conv1(x))))
     x = self.pool(F.relu(self.bn2(self.conv2(x))))
-    x = self.pool(F.relu(self.bn3(self.conv3(x))))
-    x = x.view(-1, 128 * 4 * 4)
+    x = F.relu(self.bn3(self.conv3(x)))
+    x = F.relu(self.bn4(self.conv4(x)))
+    x = self.pool(F.relu(self.bn5(self.conv5(x))))
+    x = self.global_avg_pool(x)
+    x = x.view(-1, 512)
     x = F.relu(self.fc1(x))
     x = self.dropout(x)
     x = F.relu(self.fc2(x))
@@ -214,9 +226,20 @@ If you want to print your loss during each epoch, you can use the `enumerate` fu
 
 ```python
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-net.to(device)
 
-num_epochs = 10
+# If multiple GPUs are available, use DataParallel
+if torch.cuda.device_count() > 1:
+  print(f"Using {torch.cuda.device_count()} GPUs")
+  net = nn.DataParallel(net)
+
+net.to(device)
+print(f"Device being used: {device}")
+
+# Define a learning rate scheduler
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
+# Train the network
+num_epochs = 20
 for epoch in range(num_epochs):  # loop over the dataset multiple times
   running_loss = 0.0
   for i, data in enumerate(trainloader, 0):
@@ -235,415 +258,41 @@ for epoch in range(num_epochs):  # loop over the dataset multiple times
 
     # print statistics
     running_loss += loss.item()
-    if i % 250 == 249:    # print every 250 mini-batches
+    # print(f"[Epoch {epoch + 1}, Batch {i + 1}]")
+    
+    if (i + 1) % 250 == 0:    # print every 250 mini-batches
       print(f"[Epoch {epoch + 1}, Batch {i + 1}] loss: {running_loss / 250:.3f}")
       running_loss = 0.0
+
+  # Step the scheduler
+  scheduler.step()
 
 print('Finished Training')
 ```
 
-    [Epoch 1, Batch 250] loss: 2.230
-    [Epoch 1, Batch 500] loss: 2.055
-    [Epoch 1, Batch 750] loss: 1.993
-    [Epoch 1, Batch 1000] loss: 1.910
-    [Epoch 1, Batch 1250] loss: 1.914
-    [Epoch 1, Batch 1500] loss: 1.852
-    [Epoch 1, Batch 1750] loss: 1.830
-    [Epoch 1, Batch 2000] loss: 1.792
-    [Epoch 1, Batch 2250] loss: 1.756
-    [Epoch 1, Batch 2500] loss: 1.794
-    [Epoch 1, Batch 2750] loss: 1.746
-    [Epoch 1, Batch 3000] loss: 1.657
-    [Epoch 1, Batch 3250] loss: 1.667
-    [Epoch 1, Batch 3500] loss: 1.660
-    [Epoch 1, Batch 3750] loss: 1.669
-    [Epoch 1, Batch 4000] loss: 1.627
-    [Epoch 1, Batch 4250] loss: 1.587
-    [Epoch 1, Batch 4500] loss: 1.592
-    [Epoch 1, Batch 4750] loss: 1.575
-    [Epoch 1, Batch 5000] loss: 1.588
-    [Epoch 1, Batch 5250] loss: 1.547
-    [Epoch 1, Batch 5500] loss: 1.565
-    [Epoch 1, Batch 5750] loss: 1.507
-    [Epoch 1, Batch 6000] loss: 1.485
-    [Epoch 1, Batch 6250] loss: 1.488
-    [Epoch 1, Batch 6500] loss: 1.458
-    [Epoch 1, Batch 6750] loss: 1.467
-    [Epoch 1, Batch 7000] loss: 1.503
-    [Epoch 1, Batch 7250] loss: 1.459
-    [Epoch 1, Batch 7500] loss: 1.431
-    [Epoch 1, Batch 7750] loss: 1.377
-    [Epoch 1, Batch 8000] loss: 1.467
-    [Epoch 1, Batch 8250] loss: 1.451
-    [Epoch 1, Batch 8500] loss: 1.384
-    [Epoch 1, Batch 8750] loss: 1.426
-    [Epoch 1, Batch 9000] loss: 1.335
-    [Epoch 1, Batch 9250] loss: 1.354
-    [Epoch 1, Batch 9500] loss: 1.280
-    [Epoch 1, Batch 9750] loss: 1.379
-    [Epoch 1, Batch 10000] loss: 1.323
-    [Epoch 2, Batch 250] loss: 1.297
-    [Epoch 2, Batch 500] loss: 1.318
-    [Epoch 2, Batch 750] loss: 1.296
-    [Epoch 2, Batch 1000] loss: 1.304
-    [Epoch 2, Batch 1250] loss: 1.303
-    [Epoch 2, Batch 1500] loss: 1.280
-    [Epoch 2, Batch 1750] loss: 1.299
-    [Epoch 2, Batch 2000] loss: 1.247
-    [Epoch 2, Batch 2250] loss: 1.262
-    [Epoch 2, Batch 2500] loss: 1.208
-    [Epoch 2, Batch 2750] loss: 1.227
-    [Epoch 2, Batch 3000] loss: 1.201
-    [Epoch 2, Batch 3250] loss: 1.241
-    [Epoch 2, Batch 3500] loss: 1.228
-    [Epoch 2, Batch 3750] loss: 1.174
-    [Epoch 2, Batch 4000] loss: 1.239
-    [Epoch 2, Batch 4250] loss: 1.238
-    [Epoch 2, Batch 4500] loss: 1.223
-    [Epoch 2, Batch 4750] loss: 1.209
-    [Epoch 2, Batch 5000] loss: 1.185
-    [Epoch 2, Batch 5250] loss: 1.205
-    [Epoch 2, Batch 5500] loss: 1.195
-    [Epoch 2, Batch 5750] loss: 1.154
-    [Epoch 2, Batch 6000] loss: 1.215
-    [Epoch 2, Batch 6250] loss: 1.206
-    [Epoch 2, Batch 6500] loss: 1.190
-    [Epoch 2, Batch 6750] loss: 1.168
-    [Epoch 2, Batch 7000] loss: 1.260
-    [Epoch 2, Batch 7250] loss: 1.135
-    [Epoch 2, Batch 7500] loss: 1.182
-    [Epoch 2, Batch 7750] loss: 1.154
-    [Epoch 2, Batch 8000] loss: 1.155
-    [Epoch 2, Batch 8250] loss: 1.124
-    [Epoch 2, Batch 8500] loss: 1.188
-    [Epoch 2, Batch 8750] loss: 1.175
-    [Epoch 2, Batch 9000] loss: 1.128
-    [Epoch 2, Batch 9250] loss: 1.142
-    [Epoch 2, Batch 9500] loss: 1.194
-    [Epoch 2, Batch 9750] loss: 1.157
-    [Epoch 2, Batch 10000] loss: 1.095
-    [Epoch 3, Batch 250] loss: 1.104
-    [Epoch 3, Batch 500] loss: 1.042
-    [Epoch 3, Batch 750] loss: 1.001
-    [Epoch 3, Batch 1000] loss: 1.124
-    [Epoch 3, Batch 1250] loss: 1.083
-    [Epoch 3, Batch 1500] loss: 1.112
-    [Epoch 3, Batch 1750] loss: 1.083
-    [Epoch 3, Batch 2000] loss: 1.087
-    [Epoch 3, Batch 2250] loss: 1.129
-    [Epoch 3, Batch 2500] loss: 1.059
-    [Epoch 3, Batch 2750] loss: 1.063
-    [Epoch 3, Batch 3000] loss: 1.060
-    [Epoch 3, Batch 3250] loss: 1.059
-    [Epoch 3, Batch 3500] loss: 1.086
-    [Epoch 3, Batch 3750] loss: 1.113
-    [Epoch 3, Batch 4000] loss: 1.089
-    [Epoch 3, Batch 4250] loss: 1.060
-    [Epoch 3, Batch 4500] loss: 1.054
-    [Epoch 3, Batch 4750] loss: 1.105
-    [Epoch 3, Batch 5000] loss: 1.051
-    [Epoch 3, Batch 5250] loss: 1.035
-    [Epoch 3, Batch 5500] loss: 1.003
-    [Epoch 3, Batch 5750] loss: 1.041
-    [Epoch 3, Batch 6000] loss: 1.048
-    [Epoch 3, Batch 6250] loss: 1.081
-    [Epoch 3, Batch 6500] loss: 0.990
-    [Epoch 3, Batch 6750] loss: 1.057
-    [Epoch 3, Batch 7000] loss: 1.049
-    [Epoch 3, Batch 7250] loss: 0.985
-    [Epoch 3, Batch 7500] loss: 0.996
-    [Epoch 3, Batch 7750] loss: 1.075
-    [Epoch 3, Batch 8000] loss: 1.002
-    [Epoch 3, Batch 8250] loss: 1.022
-    [Epoch 3, Batch 8500] loss: 1.084
-    [Epoch 3, Batch 8750] loss: 1.023
-    [Epoch 3, Batch 9000] loss: 1.016
-    [Epoch 3, Batch 9250] loss: 1.016
-    [Epoch 3, Batch 9500] loss: 1.022
-    [Epoch 3, Batch 9750] loss: 1.057
-    [Epoch 3, Batch 10000] loss: 0.999
-    [Epoch 4, Batch 250] loss: 0.919
-    [Epoch 4, Batch 500] loss: 0.913
-    [Epoch 4, Batch 750] loss: 0.936
-    [Epoch 4, Batch 1000] loss: 0.953
-    [Epoch 4, Batch 1250] loss: 1.001
-    [Epoch 4, Batch 1500] loss: 1.028
-    [Epoch 4, Batch 1750] loss: 0.948
-    [Epoch 4, Batch 2000] loss: 0.890
-    [Epoch 4, Batch 2250] loss: 0.959
-    [Epoch 4, Batch 2500] loss: 0.971
-    [Epoch 4, Batch 2750] loss: 0.965
-    [Epoch 4, Batch 3000] loss: 0.955
-    [Epoch 4, Batch 3250] loss: 0.995
-    [Epoch 4, Batch 3500] loss: 0.948
-    [Epoch 4, Batch 3750] loss: 0.896
-    [Epoch 4, Batch 4000] loss: 0.971
-    [Epoch 4, Batch 4250] loss: 0.973
-    [Epoch 4, Batch 4500] loss: 0.980
-    [Epoch 4, Batch 4750] loss: 0.985
-    [Epoch 4, Batch 5000] loss: 0.980
-    [Epoch 4, Batch 5250] loss: 0.969
-    [Epoch 4, Batch 5500] loss: 0.940
-    [Epoch 4, Batch 5750] loss: 0.953
-    [Epoch 4, Batch 6000] loss: 0.892
-    [Epoch 4, Batch 6250] loss: 0.974
-    [Epoch 4, Batch 6500] loss: 0.917
-    [Epoch 4, Batch 6750] loss: 0.945
-    [Epoch 4, Batch 7000] loss: 0.927
-    [Epoch 4, Batch 7250] loss: 0.897
-    [Epoch 4, Batch 7500] loss: 0.924
-    [Epoch 4, Batch 7750] loss: 0.947
-    [Epoch 4, Batch 8000] loss: 0.957
-    [Epoch 4, Batch 8250] loss: 0.916
-    [Epoch 4, Batch 8500] loss: 0.954
-    [Epoch 4, Batch 8750] loss: 0.919
-    [Epoch 4, Batch 9000] loss: 0.884
-    [Epoch 4, Batch 9250] loss: 0.950
-    [Epoch 4, Batch 9500] loss: 0.976
-    [Epoch 4, Batch 9750] loss: 0.984
-    [Epoch 4, Batch 10000] loss: 0.957
-    [Epoch 5, Batch 250] loss: 0.821
-    [Epoch 5, Batch 500] loss: 0.911
-    [Epoch 5, Batch 750] loss: 0.916
-    [Epoch 5, Batch 1000] loss: 0.835
-    [Epoch 5, Batch 1250] loss: 0.890
-    [Epoch 5, Batch 1500] loss: 0.843
-    [Epoch 5, Batch 1750] loss: 0.902
-    [Epoch 5, Batch 2000] loss: 0.921
-    [Epoch 5, Batch 2250] loss: 0.906
-    [Epoch 5, Batch 2500] loss: 0.924
-    [Epoch 5, Batch 2750] loss: 0.908
-    [Epoch 5, Batch 3000] loss: 0.862
-    [Epoch 5, Batch 3250] loss: 0.895
-    [Epoch 5, Batch 3500] loss: 0.857
-    [Epoch 5, Batch 3750] loss: 0.901
-    [Epoch 5, Batch 4000] loss: 0.831
-    [Epoch 5, Batch 4250] loss: 0.833
-    [Epoch 5, Batch 4500] loss: 0.860
-    [Epoch 5, Batch 4750] loss: 0.889
-    [Epoch 5, Batch 5000] loss: 0.872
-    [Epoch 5, Batch 5250] loss: 0.876
-    [Epoch 5, Batch 5500] loss: 0.832
-    [Epoch 5, Batch 5750] loss: 0.846
-    [Epoch 5, Batch 6000] loss: 0.920
-    [Epoch 5, Batch 6250] loss: 0.890
-    [Epoch 5, Batch 6500] loss: 0.853
-    [Epoch 5, Batch 6750] loss: 0.874
-    [Epoch 5, Batch 7000] loss: 0.854
-    [Epoch 5, Batch 7250] loss: 0.901
-    [Epoch 5, Batch 7500] loss: 0.894
-    [Epoch 5, Batch 7750] loss: 0.828
-    [Epoch 5, Batch 8000] loss: 0.882
-    [Epoch 5, Batch 8250] loss: 0.853
-    [Epoch 5, Batch 8500] loss: 0.866
-    [Epoch 5, Batch 8750] loss: 0.855
-    [Epoch 5, Batch 9000] loss: 0.852
-    [Epoch 5, Batch 9250] loss: 0.852
-    [Epoch 5, Batch 9500] loss: 0.885
-    [Epoch 5, Batch 9750] loss: 0.854
-    [Epoch 5, Batch 10000] loss: 0.912
-    [Epoch 6, Batch 250] loss: 0.783
-    [Epoch 6, Batch 500] loss: 0.756
-    [Epoch 6, Batch 750] loss: 0.783
-    [Epoch 6, Batch 1000] loss: 0.775
-    [Epoch 6, Batch 1250] loss: 0.803
-    [Epoch 6, Batch 1500] loss: 0.749
-    [Epoch 6, Batch 1750] loss: 0.839
-    [Epoch 6, Batch 2000] loss: 0.792
-    [Epoch 6, Batch 2250] loss: 0.786
-    [Epoch 6, Batch 2500] loss: 0.781
-    [Epoch 6, Batch 2750] loss: 0.801
-    [Epoch 6, Batch 3000] loss: 0.840
-    [Epoch 6, Batch 3250] loss: 0.781
-    [Epoch 6, Batch 3500] loss: 0.821
-    [Epoch 6, Batch 3750] loss: 0.814
-    [Epoch 6, Batch 4000] loss: 0.819
-    [Epoch 6, Batch 4250] loss: 0.767
-    [Epoch 6, Batch 4500] loss: 0.845
-    [Epoch 6, Batch 4750] loss: 0.815
-    [Epoch 6, Batch 5000] loss: 0.810
-    [Epoch 6, Batch 5250] loss: 0.773
-    [Epoch 6, Batch 5500] loss: 0.782
-    [Epoch 6, Batch 5750] loss: 0.793
-    [Epoch 6, Batch 6000] loss: 0.795
-    [Epoch 6, Batch 6250] loss: 0.800
-    [Epoch 6, Batch 6500] loss: 0.806
-    [Epoch 6, Batch 6750] loss: 0.907
-    [Epoch 6, Batch 7000] loss: 0.786
-    [Epoch 6, Batch 7250] loss: 0.858
-    [Epoch 6, Batch 7500] loss: 0.820
-    [Epoch 6, Batch 7750] loss: 0.831
-    [Epoch 6, Batch 8000] loss: 0.833
-    [Epoch 6, Batch 8250] loss: 0.842
-    [Epoch 6, Batch 8500] loss: 0.821
-    [Epoch 6, Batch 8750] loss: 0.830
-    [Epoch 6, Batch 9000] loss: 0.802
-    [Epoch 6, Batch 9250] loss: 0.830
-    [Epoch 6, Batch 9500] loss: 0.872
-    [Epoch 6, Batch 9750] loss: 0.845
-    [Epoch 6, Batch 10000] loss: 0.816
-    [Epoch 7, Batch 250] loss: 0.732
-    [Epoch 7, Batch 500] loss: 0.758
-    [Epoch 7, Batch 750] loss: 0.754
-    [Epoch 7, Batch 1000] loss: 0.724
-    [Epoch 7, Batch 1250] loss: 0.789
-    [Epoch 7, Batch 1500] loss: 0.690
-    [Epoch 7, Batch 1750] loss: 0.753
-    [Epoch 7, Batch 2000] loss: 0.709
-    [Epoch 7, Batch 2250] loss: 0.779
-    [Epoch 7, Batch 2500] loss: 0.760
-    [Epoch 7, Batch 2750] loss: 0.755
-    [Epoch 7, Batch 3000] loss: 0.718
-    [Epoch 7, Batch 3250] loss: 0.831
-    [Epoch 7, Batch 3500] loss: 0.715
-    [Epoch 7, Batch 3750] loss: 0.737
-    [Epoch 7, Batch 4000] loss: 0.741
-    [Epoch 7, Batch 4250] loss: 0.776
-    [Epoch 7, Batch 4500] loss: 0.693
-    [Epoch 7, Batch 4750] loss: 0.699
-    [Epoch 7, Batch 5000] loss: 0.767
-    [Epoch 7, Batch 5250] loss: 0.744
-    [Epoch 7, Batch 5500] loss: 0.805
-    [Epoch 7, Batch 5750] loss: 0.717
-    [Epoch 7, Batch 6000] loss: 0.782
-    [Epoch 7, Batch 6250] loss: 0.728
-    [Epoch 7, Batch 6500] loss: 0.688
-    [Epoch 7, Batch 6750] loss: 0.804
-    [Epoch 7, Batch 7000] loss: 0.748
-    [Epoch 7, Batch 7250] loss: 0.814
-    [Epoch 7, Batch 7500] loss: 0.833
-    [Epoch 7, Batch 7750] loss: 0.848
-    [Epoch 7, Batch 8000] loss: 0.748
-    [Epoch 7, Batch 8250] loss: 0.839
-    [Epoch 7, Batch 8500] loss: 0.808
-    [Epoch 7, Batch 8750] loss: 0.822
-    [Epoch 7, Batch 9000] loss: 0.744
-    [Epoch 7, Batch 9250] loss: 0.755
-    [Epoch 7, Batch 9500] loss: 0.714
-    [Epoch 7, Batch 9750] loss: 0.797
-    [Epoch 7, Batch 10000] loss: 0.796
-    [Epoch 8, Batch 250] loss: 0.668
-    [Epoch 8, Batch 500] loss: 0.685
-    [Epoch 8, Batch 750] loss: 0.654
-    [Epoch 8, Batch 1000] loss: 0.736
-    [Epoch 8, Batch 1250] loss: 0.716
-    [Epoch 8, Batch 1500] loss: 0.690
-    [Epoch 8, Batch 1750] loss: 0.676
-    [Epoch 8, Batch 2000] loss: 0.714
-    [Epoch 8, Batch 2250] loss: 0.667
-    [Epoch 8, Batch 2500] loss: 0.683
-    [Epoch 8, Batch 2750] loss: 0.706
-    [Epoch 8, Batch 3000] loss: 0.727
-    [Epoch 8, Batch 3250] loss: 0.700
-    [Epoch 8, Batch 3500] loss: 0.740
-    [Epoch 8, Batch 3750] loss: 0.745
-    [Epoch 8, Batch 4000] loss: 0.711
-    [Epoch 8, Batch 4250] loss: 0.710
-    [Epoch 8, Batch 4500] loss: 0.697
-    [Epoch 8, Batch 4750] loss: 0.723
-    [Epoch 8, Batch 5000] loss: 0.740
-    [Epoch 8, Batch 5250] loss: 0.728
-    [Epoch 8, Batch 5500] loss: 0.735
-    [Epoch 8, Batch 5750] loss: 0.723
-    [Epoch 8, Batch 6000] loss: 0.749
-    [Epoch 8, Batch 6250] loss: 0.762
-    [Epoch 8, Batch 6500] loss: 0.743
-    [Epoch 8, Batch 6750] loss: 0.736
-    [Epoch 8, Batch 7000] loss: 0.708
-    [Epoch 8, Batch 7250] loss: 0.685
-    [Epoch 8, Batch 7500] loss: 0.746
-    [Epoch 8, Batch 7750] loss: 0.687
-    [Epoch 8, Batch 8000] loss: 0.701
-    [Epoch 8, Batch 8250] loss: 0.755
-    [Epoch 8, Batch 8500] loss: 0.777
-    [Epoch 8, Batch 8750] loss: 0.699
-    [Epoch 8, Batch 9000] loss: 0.774
-    [Epoch 8, Batch 9250] loss: 0.723
-    [Epoch 8, Batch 9500] loss: 0.704
-    [Epoch 8, Batch 9750] loss: 0.757
-    [Epoch 8, Batch 10000] loss: 0.731
-    [Epoch 9, Batch 250] loss: 0.651
-    [Epoch 9, Batch 500] loss: 0.644
-    [Epoch 9, Batch 750] loss: 0.638
-    [Epoch 9, Batch 1000] loss: 0.658
-    [Epoch 9, Batch 1250] loss: 0.592
-    [Epoch 9, Batch 1500] loss: 0.627
-    [Epoch 9, Batch 1750] loss: 0.667
-    [Epoch 9, Batch 2000] loss: 0.717
-    [Epoch 9, Batch 2250] loss: 0.672
-    [Epoch 9, Batch 2500] loss: 0.723
-    [Epoch 9, Batch 2750] loss: 0.692
-    [Epoch 9, Batch 3000] loss: 0.720
-    [Epoch 9, Batch 3250] loss: 0.714
-    [Epoch 9, Batch 3500] loss: 0.685
-    [Epoch 9, Batch 3750] loss: 0.668
-    [Epoch 9, Batch 4000] loss: 0.659
-    [Epoch 9, Batch 4250] loss: 0.684
-    [Epoch 9, Batch 4500] loss: 0.659
-    [Epoch 9, Batch 4750] loss: 0.653
-    [Epoch 9, Batch 5000] loss: 0.681
-    [Epoch 9, Batch 5250] loss: 0.662
-    [Epoch 9, Batch 5500] loss: 0.656
-    [Epoch 9, Batch 5750] loss: 0.675
-    [Epoch 9, Batch 6000] loss: 0.719
-    [Epoch 9, Batch 6250] loss: 0.649
-    [Epoch 9, Batch 6500] loss: 0.596
-    [Epoch 9, Batch 6750] loss: 0.701
-    [Epoch 9, Batch 7000] loss: 0.757
-    [Epoch 9, Batch 7250] loss: 0.661
-    [Epoch 9, Batch 7500] loss: 0.658
-    [Epoch 9, Batch 7750] loss: 0.737
-    [Epoch 9, Batch 8000] loss: 0.725
-    [Epoch 9, Batch 8250] loss: 0.668
-    [Epoch 9, Batch 8500] loss: 0.693
-    [Epoch 9, Batch 8750] loss: 0.665
-    [Epoch 9, Batch 9000] loss: 0.662
-    [Epoch 9, Batch 9250] loss: 0.646
-    [Epoch 9, Batch 9500] loss: 0.725
-    [Epoch 9, Batch 9750] loss: 0.709
-    [Epoch 9, Batch 10000] loss: 0.713
-    [Epoch 10, Batch 250] loss: 0.597
-    [Epoch 10, Batch 500] loss: 0.658
-    [Epoch 10, Batch 750] loss: 0.645
-    [Epoch 10, Batch 1000] loss: 0.675
-    [Epoch 10, Batch 1250] loss: 0.673
-    [Epoch 10, Batch 1500] loss: 0.666
-    [Epoch 10, Batch 1750] loss: 0.571
-    [Epoch 10, Batch 2000] loss: 0.647
-    [Epoch 10, Batch 2250] loss: 0.649
-    [Epoch 10, Batch 2500] loss: 0.653
-    [Epoch 10, Batch 2750] loss: 0.562
-    [Epoch 10, Batch 3000] loss: 0.645
-    [Epoch 10, Batch 3250] loss: 0.664
-    [Epoch 10, Batch 3500] loss: 0.666
-    [Epoch 10, Batch 3750] loss: 0.673
-    [Epoch 10, Batch 4000] loss: 0.661
-    [Epoch 10, Batch 4250] loss: 0.663
-    [Epoch 10, Batch 4500] loss: 0.646
-    [Epoch 10, Batch 4750] loss: 0.701
-    [Epoch 10, Batch 5000] loss: 0.638
-    [Epoch 10, Batch 5250] loss: 0.617
-    [Epoch 10, Batch 5500] loss: 0.643
-    [Epoch 10, Batch 5750] loss: 0.633
-    [Epoch 10, Batch 6000] loss: 0.690
-    [Epoch 10, Batch 6250] loss: 0.646
-    [Epoch 10, Batch 6500] loss: 0.617
-    [Epoch 10, Batch 6750] loss: 0.594
-    [Epoch 10, Batch 7000] loss: 0.658
-    [Epoch 10, Batch 7250] loss: 0.638
-    [Epoch 10, Batch 7500] loss: 0.695
-    [Epoch 10, Batch 7750] loss: 0.623
-    [Epoch 10, Batch 8000] loss: 0.636
-    [Epoch 10, Batch 8250] loss: 0.612
-    [Epoch 10, Batch 8500] loss: 0.646
-    [Epoch 10, Batch 8750] loss: 0.692
-    [Epoch 10, Batch 9000] loss: 0.650
-    [Epoch 10, Batch 9250] loss: 0.655
-    [Epoch 10, Batch 9500] loss: 0.646
-    [Epoch 10, Batch 9750] loss: 0.700
-    [Epoch 10, Batch 10000] loss: 0.670
+    Device being used: cuda:0
+    [Epoch 1, Batch 250] loss: 1.493
+    [Epoch 2, Batch 250] loss: 1.020
+    [Epoch 3, Batch 250] loss: 0.813
+    [Epoch 4, Batch 250] loss: 0.691
+    [Epoch 5, Batch 250] loss: 0.573
+    [Epoch 6, Batch 250] loss: 0.504
+    [Epoch 7, Batch 250] loss: 0.435
+    [Epoch 8, Batch 250] loss: 0.267
+    [Epoch 9, Batch 250] loss: 0.211
+    [Epoch 10, Batch 250] loss: 0.184
+    [Epoch 11, Batch 250] loss: 0.164
+    [Epoch 12, Batch 250] loss: 0.142
+    [Epoch 13, Batch 250] loss: 0.128
+    [Epoch 14, Batch 250] loss: 0.111
+    [Epoch 15, Batch 250] loss: 0.084
+    [Epoch 16, Batch 250] loss: 0.083
+    [Epoch 17, Batch 250] loss: 0.077
+    [Epoch 18, Batch 250] loss: 0.076
+    [Epoch 19, Batch 250] loss: 0.076
+    [Epoch 20, Batch 250] loss: 0.070
     Finished Training
-
+    
 
 Plot the training loss (and validation loss/accuracy, if recorded).
 
@@ -706,8 +355,8 @@ with torch.no_grad():
 print(f'Accuracy of the network on the 10000 test images: {100 * correct / total:.2f}%')
 ```
 
-    Accuracy of the network on the 10000 test images: 72.78%
-
+    Accuracy of the network on the 10000 test images: 84.52%
+    
 
 
 ```python
@@ -715,14 +364,16 @@ print(f'Accuracy of the network on the 10000 test images: {100 * correct / total
 dataiter = iter(testloader)
 images, labels = next(dataiter)
 
+predict_number = 0
+
 # Display the image
-img = images[1] / 2 + 0.5  # unnormalize
+img = images[predict_number] / 2 + 0.5  # unnormalize
 npimg = img.numpy()
 plt.imshow(np.transpose(npimg, (1, 2, 0)))
 plt.show()
 
 # Print the true label
-print(f'True label: {classes[labels[1]]}')
+print(f'True label: {classes[labels[predict_number]]}')
 
 # Predict the label
 images = images.to(device)
@@ -730,7 +381,7 @@ outputs = net(images)
 _, predicted = torch.max(outputs, 1)
 
 # Print the predicted label
-print(f'Predicted label: {classes[predicted[1]]}')
+print(f'Predicted label: {classes[predicted[predict_number]]}')
 ```
 
 
@@ -739,9 +390,9 @@ print(f'Predicted label: {classes[predicted[1]]}')
     
 
 
-    True label: ship
-    Predicted label: ship
-
+    True label: cat
+    Predicted label: cat
+    
 
 ## Saving your model
 Using `torch.save`, save your model for future loading.
@@ -750,3 +401,17 @@ Using `torch.save`, save your model for future loading.
 ```python
 torch.save(net.state_dict(), 'cifar_net.pth')
 ```
+
+## Make a Recommendation
+
+Based on your evaluation, what is your recommendation on whether to build or buy? Explain your reasoning below.
+
+Given the accuracy of 84.52% achieved by the custom-built neural network, it is evident that the model performs well on the CIFAR-10 dataset. This accuracy surpasses the initial target of 70%, indicating that the custom model is effective for this task. 
+
+Recommendation: **Build**
+
+Reasoning:
+1. **Performance**: The custom model has demonstrated high accuracy, which meets and exceeds the target performance.
+2. **Customization**: Building your own model allows for greater flexibility and customization to adapt to specific needs and datasets.
+3. **Cost**: While building a model requires an initial investment in terms of time and computational resources, it can be more cost-effective in the long run compared to purchasing a pre-built solution, especially if the model needs to be adapted or retrained frequently.
+4. **Learning and Improvement**: Developing a custom model provides valuable learning opportunities and insights into the model's behavior, which can be beneficial for future projects and improvements.
